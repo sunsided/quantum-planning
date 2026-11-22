@@ -1,0 +1,22 @@
+[package]
+name = "quantum-planning"
+description = "Quantum algorithms for planning and search, on simulators: Grover search, quantum backtracking, amplitude estimation, quantum walks on game trees and QAOA"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Markus Mayer <widemeadows@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sunsided/quantum-planning"
+readme = "README.md"
+keywords = ["quantum", "grover", "planning", "search", "qaoa"]
+categories = ["algorithms", "science", "no-std"]
+
+[dependencies]
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_docs_in_private_items = "warn"
