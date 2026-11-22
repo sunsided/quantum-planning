@@ -10,6 +10,19 @@ repository = "https://github.com/sunsided/quantum-planning"
 readme = "README.md"
 keywords = ["quantum", "grover", "planning", "search", "qaoa"]
 categories = ["algorithms", "science", "no-std"]
+# Repository tooling stays out of the published crate.
+exclude = [
+    ".github/",
+    "scripts/",
+    ".pre-commit-config.yaml",
+    "Taskfile.dist.yaml",
+    "_typos.toml",
+    "clippy.toml",
+    "codecov.yml",
+    "deny.toml",
+    "release-plz.toml",
+    "rustfmt.toml",
+]
 
 [dependencies]
 
