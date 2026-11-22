@@ -14,6 +14,7 @@
 //! Repository: <https://github.com/sunsided/quantum-planning>
 
 #![no_std]
+#![forbid(unsafe_code)]
 
 /// A predicate that marks valid candidates, the oracle of a quantum search.
 pub trait Oracle<Candidate> {
