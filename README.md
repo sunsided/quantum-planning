@@ -59,7 +59,7 @@ assert_eq!(marked, 5);
 
 // Basis index `i` of a 4-qubit register is the plan with action mask `i`.
 let plan = |index: usize| u8::try_from(index).ok();
-let mut state = StateVector::new(4)?;
+let mut state = StateVector::new(4).expect("4 qubits are below the limit");
 let mut rng = SplitMix64::new(7);
 
 // With 5 of 16 plans marked, one Grover iteration and one check find a valid plan with
@@ -76,7 +76,6 @@ let mut oracle = PhaseOracle::new(ValidPlan, plan);
 let index = search_unknown(&mut state, &mut oracle, 40, &mut rng).expect("a valid plan exists");
 
 assert!(ValidPlan.accepts(&plan(index).unwrap()));
-# Ok::<(), quantum_planning::TooManyQubits>(())
 ```
 
 The query counts count oracle calls, not simulator work: one phase-oracle application or one

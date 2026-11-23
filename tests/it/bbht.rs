@@ -80,3 +80,25 @@ fn mean_queries_scale_as_sqrt_n_over_m() {
         );
     }
 }
+
+/// The budget counts only the queries of the current call, so a reused oracle still searches.
+#[test]
+fn budget_is_per_call() {
+    let mut state = StateVector::new(6).unwrap();
+    let mut oracle = PhaseOracle::new(
+        Spread {
+            states: 64,
+            count: 1,
+        },
+        Some,
+    );
+    let mut rng = SplitMix64::new(3);
+
+    for _ in 0..5 {
+        let before = oracle.queries();
+        let found = search_unknown(&mut state, &mut oracle, budget(64), &mut rng);
+
+        assert!(found.is_some());
+        assert!(oracle.queries() - before <= budget(64));
+    }
+}

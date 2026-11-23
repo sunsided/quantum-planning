@@ -14,8 +14,8 @@ const LAMBDA: f64 = 6.0 / 5.0;
 /// After a failed round, `m` grows by `6/5` up to `√N`. A round costs `j + 1` queries. With
 /// `M` of `N` states marked, the expected cost is `O(√(N/M))`.
 ///
-/// The search stops when the queries of `oracle` reach `max_queries`, and never goes past
-/// it. The error is one-sided: a returned index is always marked, but `None` can also mean
+/// The search stops when this call has spent `max_queries` queries, and never goes past it.
+/// Queries from earlier calls on the same `oracle` do not count against the budget. The error is one-sided: a returned index is always marked, but `None` can also mean
 /// that the budget was too small. With no marked state, the result is `None` after
 /// `max_queries` queries. A budget of `9·(⌊√N⌋ + 1)` makes a miss rare when a solution exists.
 pub fn search_unknown<O, F, C>(
@@ -29,10 +29,11 @@ where
     F: Fn(usize) -> Option<C>,
 {
     let ceiling = libm::sqrt(ratio(state.states(), 1));
+    let start = oracle.queries();
     let mut bound = 1.0;
 
-    while oracle.queries() < max_queries {
-        let remaining = max_queries - oracle.queries();
+    while oracle.queries() - start < max_queries {
+        let remaining = max_queries - (oracle.queries() - start);
         let iterations = pick_iterations(bound, rng).min(remaining - 1);
 
         amplify(state, oracle, iterations);

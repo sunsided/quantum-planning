@@ -304,9 +304,12 @@ mod tests {
     fn rejects_too_many_qubits() {
         let requested = MAX_QUBITS + 1;
 
+        let error = StateVector::new(requested).unwrap_err();
+
+        assert_eq!(error, TooManyQubits { requested });
         assert_eq!(
-            StateVector::new(requested).unwrap_err(),
-            TooManyQubits { requested }
+            alloc::format!("{error}"),
+            "25 qubits requested, but the simulator holds at most 24"
         );
     }
 }
