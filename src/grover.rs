@@ -19,7 +19,9 @@ pub use bbht::search_unknown;
 
 use core::f64::consts::FRAC_PI_4;
 
-use crate::{Oracle, PhaseOracle, SplitMix64, StateVector};
+use rand_core::Rng;
+
+use crate::{Oracle, PhaseOracle, StateVector};
 
 /// Returns the iteration count that maximizes `sin²((2k+1)θ)` for `marked` of `states`.
 ///
@@ -69,15 +71,16 @@ pub fn amplify<O, F, C>(
 /// classically. It costs that many queries plus one. One run succeeds with the probability
 /// `sin²((2k+1)θ)`, at least `1 − M/N`. It returns `None` when the measured index
 /// is not marked. Run it again on `None`, or use [`search_unknown`].
-pub fn search_known<O, F, C>(
+pub fn search_known<O, F, C, R>(
     state: &mut StateVector,
     oracle: &mut PhaseOracle<O, F, C>,
     marked: usize,
-    rng: &mut SplitMix64,
+    rng: &mut R,
 ) -> Option<usize>
 where
     O: Oracle<C>,
     F: Fn(usize) -> Option<C>,
+    R: Rng + ?Sized,
 {
     amplify(state, oracle, optimal_iterations(state.states(), marked));
 

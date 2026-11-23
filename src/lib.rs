@@ -5,7 +5,7 @@
 //! ## Scope
 //!
 //! - A state-vector simulator ([`StateVector`]) with `H`, `X`, `Z`, phase and multi-controlled
-//!   `Z` gates, measurement probabilities and seeded sampling
+//!   `Z` gates, measurement probabilities and seeded sampling over any [`rand_core::Rng`]
 //! - Grover search over candidate plans, with phase oracles ([`PhaseOracle`]) built from
 //!   validity checks, for a known ([`grover::search_known`]) and an unknown
 //!   ([`grover::search_unknown`], BBHT) number of solutions

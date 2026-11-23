@@ -82,7 +82,8 @@ The query counts count oracle calls, not simulator work: one phase-oracle applic
 classical check is one query. A classical scan needs about `N/(M+1)` queries; Grover search
 needs about `π/4·√(N/M)`.
 
-The crate is `no_std` with `alloc`, and its only dependency is `libm`.
+The crate is `no_std` with `alloc`. It depends on `libm` and on `rand_core`: sampling and the
+searches take any `R: rand_core::Rng`, and `SplitMix64` is a small seeded one.
 
 ## Minimum supported Rust version
 

@@ -13,7 +13,7 @@ applyTo: "**/Cargo.toml,release-plz.toml,.github/workflows/release-plz.yml,**/CH
   are not published have `publish = false`.
 - The single crate `quantum-planning` is tagged `vX.Y.Z`.
 - New dependencies must pass `cargo deny check`: allowed licenses, no advisories, no git or
-  unknown-registry sources. The only runtime dependency is `libm`; adding another needs a reason in the PR.
+  unknown-registry sources. The runtime dependencies are `libm` and `rand_core` (public: `Rng` bounds); adding another needs a reason in the PR.
 - `rust-version` is a signal, not a contract. Raising it is allowed when a dependency or a
   feature benefits. It needs a minor release and a changelog note, never a patch release.
 - release-plz runs in git-only mode: it tags and creates GitHub Releases. `publish-crates-io.yml`

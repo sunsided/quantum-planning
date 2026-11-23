@@ -13,7 +13,10 @@ use alloc::vec::Vec;
 use core::f64::consts::FRAC_1_SQRT_2;
 use core::fmt;
 
-use crate::{Complex, SplitMix64};
+use rand_core::Rng;
+
+use crate::Complex;
+use crate::rng::unit_f64;
 
 /// The largest register the simulator accepts: `2^24` amplitudes, 256 MiB of state.
 pub const MAX_QUBITS: usize = 24;
@@ -180,8 +183,8 @@ impl StateVector {
     ///
     /// The draw comes from `rng`, so a fixed seed gives a reproducible result. When rounding
     /// leaves the probabilities a little below 1 in total, the last index takes the rest.
-    pub fn sample(&self, rng: &mut SplitMix64) -> usize {
-        let draw = rng.next_f64();
+    pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
+        let draw = unit_f64(rng);
         let mut cumulative = 0.0;
 
         for (index, probability) in self.probabilities().enumerate() {

@@ -1,6 +1,9 @@
 //! Exponential Grover search for an unknown number of marked states (BBHT).
 
-use crate::{Oracle, PhaseOracle, SplitMix64, StateVector};
+use rand_core::Rng;
+
+use crate::rng::below;
+use crate::{Oracle, PhaseOracle, StateVector};
 
 use super::{amplify, ratio};
 
@@ -23,15 +26,16 @@ const LAMBDA: f64 = 6.0 / 5.0;
 /// The error is one-sided: a returned index is always marked, but `None` can also mean that
 /// the budget was too small. With no marked state, the result is `None` after `max_queries`
 /// queries. A budget of `9·(⌊√N⌋ + 1)` makes a miss rare when a solution exists.
-pub fn search_unknown<O, F, C>(
+pub fn search_unknown<O, F, C, R>(
     state: &mut StateVector,
     oracle: &mut PhaseOracle<O, F, C>,
     max_queries: usize,
-    rng: &mut SplitMix64,
+    rng: &mut R,
 ) -> Option<usize>
 where
     O: Oracle<C>,
     F: Fn(usize) -> Option<C>,
+    R: Rng + ?Sized,
 {
     let ceiling = libm::sqrt(ratio(state.states(), 1));
     let start = oracle.queries();
@@ -56,7 +60,7 @@ where
 }
 
 /// Picks an iteration count uniformly from the integers below `bound`.
-fn pick_iterations(bound: f64, rng: &mut SplitMix64) -> usize {
+fn pick_iterations<R: Rng + ?Sized>(bound: f64, rng: &mut R) -> usize {
     #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
@@ -64,5 +68,5 @@ fn pick_iterations(bound: f64, rng: &mut SplitMix64) -> usize {
     )]
     let choices = libm::ceil(bound) as usize;
 
-    rng.below(choices)
+    below(rng, choices)
 }

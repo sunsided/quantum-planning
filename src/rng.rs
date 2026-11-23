@@ -1,4 +1,12 @@
-//! A small seeded random number generator for reproducible measurement and BBHT rounds.
+//! Random draws over [`rand_core::Rng`], and a small seeded generator.
+//!
+//! The simulator and the searches take any `R: Rng`, so a fixed seed gives reproducible
+//! measurements and BBHT rounds. [`SplitMix64`] is a dependency-free generator for callers
+//! that have none.
+
+use core::convert::Infallible;
+
+use rand_core::{Rng, TryRng};
 
 /// The `SplitMix64` generator: fast, seedable and reproducible on every platform.
 ///
@@ -6,7 +14,7 @@
 /// iteration counts.
 #[derive(Clone, Debug)]
 pub struct SplitMix64 {
-    /// The generator state. Each call adds the golden-ratio increment to it.
+    /// The generator state. Each step adds the golden-ratio increment to it.
     state: u64,
 }
 
@@ -17,8 +25,8 @@ impl SplitMix64 {
         Self { state: seed }
     }
 
-    /// Returns the next 64 random bits.
-    pub fn next_u64(&mut self) -> u64 {
+    /// Advances the state and returns the next 64 random bits.
+    fn step(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
 
         let mut z = self.state;
@@ -27,45 +35,70 @@ impl SplitMix64 {
 
         z ^ (z >> 31)
     }
+}
 
-    /// Returns a uniform value in `[0, 1)` with 53 random bits.
-    pub fn next_f64(&mut self) -> f64 {
-        /// The weight of the lowest of the 53 mantissa bits, `2^-53`.
-        const UNIT: f64 = 1.0 / 9_007_199_254_740_992.0;
+/// The generator cannot fail, so it is an [`Rng`] through the blanket impl of `rand_core`.
+impl TryRng for SplitMix64 {
+    type Error = Infallible;
 
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "the value has 53 bits after the shift, so f64 holds it exactly"
-        )]
-        let bits = (self.next_u64() >> 11) as f64;
+    fn try_next_u32(&mut self) -> Result<u32, Infallible> {
+        // The upper half of the output has the better bits; the shift makes the cast lossless.
+        let upper = (self.step() >> 32) as u32;
 
-        bits * UNIT
+        Ok(upper)
     }
 
-    /// Returns a uniform integer in `0..bound`, or `0` when `bound` is `0`.
-    ///
-    /// shortcut: multiply-high without rejection, so the bias is at most `bound / 2^64`; add
-    /// rejection if a caller ever needs exact uniformity.
-    pub fn below(&mut self, bound: usize) -> usize {
-        let bound = bound as u64;
-        let wide = u128::from(self.next_u64()) * u128::from(bound);
+    fn try_next_u64(&mut self) -> Result<u64, Infallible> {
+        Ok(self.step())
+    }
 
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "the high word is below bound, so it fits in usize"
-        )]
-        let value = (wide >> 64) as usize;
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Infallible> {
+        for chunk in dst.chunks_mut(8) {
+            let bytes = self.step().to_le_bytes();
+            chunk.copy_from_slice(&bytes[..chunk.len()]);
+        }
 
-        value
+        Ok(())
     }
 }
 
-/// Unit tests for the generator.
+/// Returns a uniform value in `[0, 1)` with 53 random bits from `rng`.
+pub(crate) fn unit_f64<R: Rng + ?Sized>(rng: &mut R) -> f64 {
+    /// The weight of the lowest of the 53 mantissa bits, `2^-53`.
+    const UNIT: f64 = 1.0 / 9_007_199_254_740_992.0;
+
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "the value has 53 bits after the shift, so f64 holds it exactly"
+    )]
+    let bits = (rng.next_u64() >> 11) as f64;
+
+    bits * UNIT
+}
+
+/// Returns a uniform integer in `0..bound` from `rng`, or `0` when `bound` is `0`.
+///
+/// shortcut: multiply-high without rejection, so the bias is at most `bound / 2^64`; add
+/// rejection if a caller ever needs exact uniformity.
+pub(crate) fn below<R: Rng + ?Sized>(rng: &mut R, bound: usize) -> usize {
+    let wide = u128::from(rng.next_u64()) * bound as u128;
+
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the high word is below bound, so it fits in usize"
+    )]
+    let value = (wide >> 64) as usize;
+
+    value
+}
+
+/// Unit tests for the generator and the draws.
 #[cfg(test)]
 mod tests {
-    use super::SplitMix64;
+    use super::{SplitMix64, below, unit_f64};
+    use rand_core::Rng;
 
-    /// The same seed gives the same sequence, and the values stay in range.
+    /// The same seed gives the same sequence, and the draws stay in range.
     #[test]
     fn is_reproducible_and_in_range() {
         let mut a = SplitMix64::new(7);
@@ -73,13 +106,31 @@ mod tests {
 
         for _ in 0..1000 {
             assert_eq!(a.next_u64(), b.next_u64());
-            assert!((0.0..1.0).contains(&a.next_f64()));
-            assert!(a.below(10) < 10);
+            assert!((0.0..1.0).contains(&unit_f64(&mut a)));
+            assert!(below(&mut a, 10) < 10);
 
-            b.next_f64();
-            b.below(10);
+            unit_f64(&mut b);
+            below(&mut b, 10);
         }
 
-        assert_eq!(a.below(0), 0);
+        assert_eq!(below(&mut a, 0), 0);
+    }
+
+    /// `fill_bytes` writes the little-endian words of the sequence, also into a partial chunk.
+    #[test]
+    fn fills_bytes_from_the_sequence() {
+        let mut words = SplitMix64::new(1);
+        let first = words.next_u64().to_le_bytes();
+        let second = words.next_u64().to_le_bytes();
+
+        let mut bytes = [0_u8; 11];
+        SplitMix64::new(1).fill_bytes(&mut bytes);
+
+        assert_eq!(bytes[..8], first);
+        assert_eq!(bytes[8..], second[..3]);
+        assert_eq!(
+            SplitMix64::new(1).next_u32(),
+            u32::from_le_bytes([first[4], first[5], first[6], first[7]])
+        );
     }
 }
