@@ -20,8 +20,10 @@ applyTo: "**/*.rs"
   `#[expect(lint, reason = "...")]`. Never `#[allow]`, and never crate-level suppression.
 - No `unsafe` unless the crate opts out of `#![forbid(unsafe_code)]` with a documented
   reason. Each unsafe block has one operation and a `// SAFETY:` comment.
-- The crate is `#![no_std]` without `alloc` and has no runtime dependencies (the CI `no-std`
-  job). Flag any new `[dependencies]` entry, any `std` or `alloc` use, and any feature-gated
+- The crate is `#![no_std]` with `alloc` (the state vector). Its runtime dependencies are
+  `libm` and `rand_core` 0.10 without default features (the CI `no-std` job). Randomness
+  comes through `R: rand_core::Rng`. Flag any new `[dependencies]` entry, any `std` use, float
+  math through `std` instead of `libm`, and any feature-gated
   item without its `#[cfg]` on the re-export in `lib.rs`.
 - `Oracle::accepts` marks the candidates that solve the problem. It is a pure predicate:
   the same candidate always gets the same answer, since the algorithms count oracle queries.

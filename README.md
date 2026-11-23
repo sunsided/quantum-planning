@@ -12,12 +12,16 @@ Quantum algorithms for planning and search, on simulators: Grover search, quantu
 
 ## Scope
 
-- Grover search over candidate plans, with oracles built from validity checks
-- Quantum backtracking (Montanaro) as a quantum walk on search trees
-- Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
-- Quantum-walk evaluation of game trees (NAND trees)
-- QAOA circuits for QUBO-encoded planning problems
-- A simulator interface, with query-count comparisons against the classical algorithms
+- A state-vector simulator with `H`, `X`, `Z`, phase and multi-controlled `Z` gates,
+  measurement probabilities and seeded sampling (little-endian: qubit `q` is bit `q` of the
+  basis index)
+- Grover search over candidate plans, with phase oracles built from validity checks, for a
+  known and an unknown (BBHT exponential search) number of solutions
+- Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
+- Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
+- Quantum-walk evaluation of game trees (NAND trees) (planned)
+- QAOA circuits for QUBO-encoded planning problems (planned)
+- Query-count comparisons against the classical algorithms
 
 The algorithms run on simulators and are measured in oracle and query counts against their classical counterparts, which limits instances to a few dozen qubits. QUBO models come from [planning-qubo](https://github.com/sunsided/planning-qubo), oracles from [constraint-search](https://github.com/sunsided/constraint-search) and game trees from [game-tree-search](https://github.com/sunsided/game-tree-search).
 
@@ -32,7 +36,8 @@ about `π/4·√(N/M)` oracle queries, where `N` candidates hold `M` marked ones
 picks two of four actions, and actions 0 and 1 must not run together.
 
 ```rust
-use quantum_planning::Oracle;
+use quantum_planning::grover::{search_known, search_unknown};
+use quantum_planning::{Oracle, PhaseOracle, SplitMix64, StateVector};
 
 /// Accepts plans, given as 4-bit masks over the actions, that run exactly two actions and
 /// not both action 0 and action 1.
@@ -52,13 +57,33 @@ let marked = (0..16_u8).filter(|plan| ValidPlan.accepts(plan)).count();
 
 assert_eq!(marked, 5);
 
-// With 5 of 16 plans marked, one Grover iteration already gives the best success chance.
-let iterations = (core::f64::consts::FRAC_PI_4 * (16.0 / 5.0_f64).sqrt()).floor();
+// Basis index `i` of a 4-qubit register is the plan with action mask `i`.
+let plan = |index: usize| u8::try_from(index).ok();
+let mut state = StateVector::new(4).expect("4 qubits are below the limit");
+let mut rng = SplitMix64::new(7);
 
-assert_eq!(iterations, 1.0);
+// With 5 of 16 plans marked, one Grover iteration and one check find a valid plan with
+// probability sin²(3θ) ≈ 0.96, where sin²θ = 5/16. `None` means: run it again.
+let mut oracle = PhaseOracle::new(ValidPlan, plan);
+if let Some(index) = search_known(&mut state, &mut oracle, 5, &mut rng) {
+    assert!(ValidPlan.accepts(&plan(index).unwrap()));
+}
+
+assert_eq!(oracle.queries(), 2);
+
+// Without the count, BBHT exponential search stops at the first verified plan or the budget.
+let mut oracle = PhaseOracle::new(ValidPlan, plan);
+let index = search_unknown(&mut state, &mut oracle, 40, &mut rng).expect("a valid plan exists");
+
+assert!(ValidPlan.accepts(&plan(index).unwrap()));
 ```
 
-The crate is `no_std` and has no dependencies.
+The query counts count oracle calls, not simulator work: one phase-oracle application or one
+classical check is one query. A classical scan needs about `N/(M+1)` queries; Grover search
+needs about `π/4·√(N/M)`.
+
+The crate is `no_std` with `alloc`. It depends on `libm` and on `rand_core`: sampling and the
+searches take any `R: rand_core::Rng`, and `SplitMix64` is a small seeded one.
 
 ## Minimum supported Rust version
 
