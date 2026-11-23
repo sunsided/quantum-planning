@@ -4,75 +4,60 @@
 //!
 //! ## Scope
 //!
-//! - Grover search over candidate plans, with oracles built from validity checks
-//! - Quantum backtracking (Montanaro) as a quantum walk on search trees
-//! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
-//! - Quantum-walk evaluation of game trees (NAND trees)
-//! - QAOA circuits for QUBO-encoded planning problems
-//! - A simulator interface, with query-count comparisons against the classical algorithms
+//! - A state-vector simulator ([`StateVector`]) with `H`, `X`, `Z`, phase and multi-controlled
+//!   `Z` gates, measurement probabilities and seeded sampling
+//! - Grover search over candidate plans, with phase oracles ([`PhaseOracle`]) built from
+//!   validity checks, for a known ([`grover::search_known`]) and an unknown
+//!   ([`grover::search_unknown`], BBHT) number of solutions
+//! - Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
+//! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
+//! - Quantum-walk evaluation of game trees (NAND trees) (planned)
+//! - QAOA circuits for QUBO-encoded planning problems (planned)
+//! - Query-count comparisons against the classical algorithms
+//!
+//! ## Query count
+//!
+//! The algorithms count oracle queries, not simulator work: one application of a
+//! [`PhaseOracle`] is one query, and one classical check of a measured candidate is one
+//! query. Compare these counts with the queries of a classical scan.
+//!
+//! The crate is `no_std` and needs `alloc` for the amplitudes.
 //!
 //! Repository: <https://github.com/sunsided/quantum-planning>
 
 #![no_std]
 #![forbid(unsafe_code)]
 
+extern crate alloc;
+
+mod complex;
+pub mod grover;
+mod phase_oracle;
+mod rng;
+mod state;
+
+pub use complex::Complex;
+pub use phase_oracle::PhaseOracle;
+pub use rng::SplitMix64;
+pub use state::{MAX_QUBITS, StateVector, TooManyQubits};
+
 /// A predicate that marks valid candidates, the oracle of a quantum search.
+///
+/// The predicate must be pure: the same candidate always gets the same answer, since the
+/// algorithms count oracle queries.
 pub trait Oracle<Candidate> {
     /// Whether `candidate` is a solution.
     fn accepts(&self, candidate: &Candidate) -> bool;
+}
+
+/// A reference to an oracle is an oracle, so a [`PhaseOracle`] can borrow one.
+impl<Candidate, O: Oracle<Candidate> + ?Sized> Oracle<Candidate> for &O {
+    fn accepts(&self, candidate: &Candidate) -> bool {
+        (**self).accepts(candidate)
+    }
 }
 
 /// Doctests for the code examples in README.md (not part of the API).
 #[cfg(doctest)]
 #[doc = include_str!("../README.md")]
 mod readme_doctests {}
-
-/// Unit tests for the `Oracle` trait, through a minimal plan-validity oracle.
-#[cfg(test)]
-mod tests {
-    use super::Oracle;
-
-    /// Accepts 4-bit action masks that run exactly two actions, but not actions 0 and 1
-    /// together.
-    struct ValidPlan;
-
-    impl Oracle<u8> for ValidPlan {
-        fn accepts(&self, plan: &u8) -> bool {
-            plan.count_ones() == 2 && plan & 0b0011 != 0b0011
-        }
-    }
-
-    /// Scans `candidates` classically and returns the first accepted one together with the
-    /// number of oracle queries spent, the baseline a quantum search is measured against.
-    fn first_marked<C, O: Oracle<C>>(oracle: &O, candidates: &[C]) -> (Option<usize>, usize) {
-        let mut queries = 0;
-        for (index, candidate) in candidates.iter().enumerate() {
-            queries += 1;
-            if oracle.accepts(candidate) {
-                return (Some(index), queries);
-            }
-        }
-
-        (None, queries)
-    }
-
-    /// The oracle marks exactly the valid plans.
-    #[test]
-    fn marks_the_valid_plans() {
-        let marked = (0..16_u8).filter(|plan| ValidPlan.accepts(plan)).count();
-
-        assert_eq!(marked, 5);
-        assert!(ValidPlan.accepts(&0b1010));
-        assert!(!ValidPlan.accepts(&0b0011));
-        assert!(!ValidPlan.accepts(&0b0111));
-    }
-
-    /// A classical scan stops at the first marked candidate and counts every query.
-    #[test]
-    fn classical_scan_counts_queries() {
-        let plans: [u8; 4] = [0b0000, 0b0011, 0b0101, 0b0110];
-
-        assert_eq!(first_marked(&ValidPlan, &plans), (Some(2), 3));
-        assert_eq!(first_marked(&ValidPlan, &plans[..2]), (None, 2));
-    }
-}
