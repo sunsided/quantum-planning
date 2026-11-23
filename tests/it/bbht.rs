@@ -82,6 +82,9 @@ fn mean_queries_scale_as_sqrt_n_over_m() {
 }
 
 /// The budget counts only the queries of the current call, so a reused oracle still searches.
+///
+/// The second call gets a budget below the queries the oracle already has. A lifetime budget
+/// would return at once without a query; a per-call budget runs at least one round.
 #[test]
 fn budget_is_per_call() {
     let mut state = StateVector::new(6).unwrap();
@@ -94,11 +97,18 @@ fn budget_is_per_call() {
     );
     let mut rng = SplitMix64::new(3);
 
-    for _ in 0..5 {
-        let before = oracle.queries();
-        let found = search_unknown(&mut state, &mut oracle, budget(64), &mut rng);
+    let found = search_unknown(&mut state, &mut oracle, budget(64), &mut rng);
+    assert!(found.is_some());
 
-        assert!(found.is_some());
-        assert!(oracle.queries() - before <= budget(64));
-    }
+    let spent = oracle.queries();
+    let small_budget = spent - 1;
+    assert!(
+        small_budget >= 1,
+        "the first call spends at least two queries with seed 3"
+    );
+
+    search_unknown(&mut state, &mut oracle, small_budget, &mut rng);
+    let second = oracle.queries() - spent;
+
+    assert!((1..=small_budget).contains(&second), "{second} queries");
 }

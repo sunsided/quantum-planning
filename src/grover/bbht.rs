@@ -15,9 +15,14 @@ const LAMBDA: f64 = 6.0 / 5.0;
 /// `M` of `N` states marked, the expected cost is `O(√(N/M))`.
 ///
 /// The search stops when this call has spent `max_queries` queries, and never goes past it.
-/// Queries from earlier calls on the same `oracle` do not count against the budget. The error is one-sided: a returned index is always marked, but `None` can also mean
-/// that the budget was too small. With no marked state, the result is `None` after
-/// `max_queries` queries. A budget of `9·(⌊√N⌋ + 1)` makes a miss rare when a solution exists.
+/// Queries from earlier calls on the same `oracle` do not count against the budget. When the
+/// rest of the budget is too small for the chosen `j`, the last round uses fewer iterations.
+/// A budget of `1` thus allows only the first BBHT round: `j = 0`, one classical sample that
+/// succeeds with probability `M/N`.
+///
+/// The error is one-sided: a returned index is always marked, but `None` can also mean that
+/// the budget was too small. With no marked state, the result is `None` after `max_queries`
+/// queries. A budget of `9·(⌊√N⌋ + 1)` makes a miss rare when a solution exists.
 pub fn search_unknown<O, F, C>(
     state: &mut StateVector,
     oracle: &mut PhaseOracle<O, F, C>,
