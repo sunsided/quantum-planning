@@ -47,7 +47,8 @@ Quantum backtracking, amplitude estimation, NAND-tree walks and QAOA on
   search against classical depth-first backtracking
 - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts, against
   classical Monte Carlo at the same number of rollouts
-- Quantum-walk evaluation of game trees (NAND trees) (planned)
+- Quantum-walk evaluation of game trees (NAND trees) by phase estimation of a
+  continuous-time walk
 - QAOA circuits for QUBO-encoded planning problems (planned)
 - Query-count comparisons against the classical algorithms
 

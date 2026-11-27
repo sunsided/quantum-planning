@@ -13,5 +13,7 @@ extend-exclude = [
 # Project-specific words typos flags wrongly, e.g. `ser = "ser"`. Keep each entry justified.
 # Amazon Braket, the quantum computing service that accepts OpenQASM 3.
 Braket = "Braket"
+# Andrew Childs, author of the NAND-tree quantum walk papers.
+Childs = "Childs"
 
 [default.extend-identifiers]

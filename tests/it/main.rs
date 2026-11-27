@@ -5,6 +5,7 @@ mod backtracking;
 mod bbht;
 mod circuit;
 mod grover;
+mod nand_tree;
 mod plan;
 
 use quantum_planning::Oracle;

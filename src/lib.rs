@@ -17,7 +17,7 @@
 //! - Quantum backtracking (Montanaro) as a quantum walk on search trees ([`backtracking`])
 //! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
 //!   ([`amplitude_estimation`])
-//! - Quantum-walk evaluation of game trees (NAND trees) (planned)
+//! - Quantum-walk evaluation of game trees (NAND trees) ([`nand_tree`])
 //! - QAOA circuits for QUBO-encoded planning problems (planned)
 //! - Query-count comparisons against the classical algorithms
 //!
@@ -41,6 +41,7 @@ pub mod backtracking;
 pub mod circuit;
 mod complex;
 pub mod grover;
+pub mod nand_tree;
 mod phase_estimation;
 mod phase_oracle;
 mod rng;
