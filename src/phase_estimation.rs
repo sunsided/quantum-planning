@@ -43,6 +43,25 @@ pub(crate) fn outcome_probabilities(
         .collect()
 }
 
+/// Returns the probability of outcome `0`: the weight of `start` on the eigenvalues near 1.
+///
+/// Same as entry `0` of [`outcome_probabilities`], at `outcomes · start.len()` cost.
+pub(crate) fn zero_outcome_probability(
+    start: &[Complex],
+    outcomes: usize,
+    mut step: impl FnMut(&mut [Complex]),
+) -> f64 {
+    let mut sum = start.to_vec();
+    let mut power = start.to_vec();
+
+    for _ in 1..outcomes {
+        step(&mut power);
+        accumulate(&mut sum, &power, Complex::ONE);
+    }
+
+    squared_norm(&sum) / square(outcomes)
+}
+
 /// Adds `factor · vector` to `sum`, entry by entry.
 fn accumulate(sum: &mut [Complex], vector: &[Complex], factor: Complex) {
     for (total, amplitude) in sum.iter_mut().zip(vector) {
@@ -76,7 +95,7 @@ fn ratio(part: usize, whole: usize) -> f64 {
 /// Unit tests on a diagonal unitary with exactly representable phases.
 #[cfg(test)]
 mod tests {
-    use super::{outcome_probabilities, ratio};
+    use super::{outcome_probabilities, ratio, zero_outcome_probability};
     use crate::Complex;
     use core::f64::consts::TAU;
 
@@ -105,5 +124,17 @@ mod tests {
         assert!((probabilities[5] - 0.5).abs() < 1e-12);
         assert!((probabilities[12] - 0.5).abs() < 1e-12);
         assert!((probabilities.iter().sum::<f64>() - 1.0).abs() < 1e-12);
+    }
+
+    /// The zero outcome alone matches the full distribution.
+    #[test]
+    fn zero_outcome_matches_the_distribution() {
+        let phases = [0, 3];
+        let start = [Complex::new(0.6, 0.0), Complex::new(0.0, 0.8)];
+
+        let full = outcome_probabilities(&start, 16, diagonal(&phases))[0];
+        let zero = zero_outcome_probability(&start, 16, diagonal(&phases));
+
+        assert!((full - 0.36).abs() < 1e-12 && (zero - full).abs() < 1e-12);
     }
 }

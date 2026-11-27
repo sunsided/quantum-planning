@@ -14,7 +14,7 @@
 //!   validity checks, for a known ([`grover::search_known`]) and an unknown
 //!   ([`grover::search_unknown`], BBHT) number of solutions, and as an exportable circuit
 //!   ([`grover::circuit`])
-//! - Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
+//! - Quantum backtracking (Montanaro) as a quantum walk on search trees ([`backtracking`])
 //! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
 //!   ([`amplitude_estimation`])
 //! - Quantum-walk evaluation of game trees (NAND trees) (planned)
@@ -37,6 +37,7 @@
 extern crate alloc;
 
 pub mod amplitude_estimation;
+pub mod backtracking;
 pub mod circuit;
 mod complex;
 pub mod grover;
