@@ -82,8 +82,9 @@ impl NandTree {
     ///
     /// # Errors
     ///
-    /// Returns [`TooManyQubits`] when the walk graph (tree, extra leaves and `r'`) needs more
-    /// than [`MAX_QUBITS`] qubits.
+    /// Returns [`TooManyQubits`] when the walk graph can have more than `2^MAX_QUBITS` nodes:
+    /// the tree, one extra leaf per input (all inputs `true`) and `r'`. A graph node holds its
+    /// edges and amplitude, so the limit costs more memory than a [`MAX_QUBITS`] state vector.
     ///
     /// # Panics
     ///
@@ -97,12 +98,8 @@ impl NandTree {
         let too_many = TooManyQubits {
             requested: MAX_QUBITS + 1,
         };
-        let leaves = u32::try_from(depth)
-            .ok()
-            .and_then(|depth| fan_out.checked_pow(depth))
-            .ok_or(too_many)?;
 
-        if leaves > 1 << (MAX_QUBITS - 2) {
+        if walk_nodes(fan_out, depth).is_none_or(|nodes| nodes > 1 << MAX_QUBITS) {
             return Err(too_many);
         }
 
@@ -139,6 +136,20 @@ impl NandTree {
 
         first..first + self.fan_out
     }
+}
+
+/// Returns the most nodes the walk graph of the balanced tree can have: every tree node, one
+/// extra leaf per input and `r'`; `None` on overflow.
+fn walk_nodes(fan_out: usize, depth: usize) -> Option<usize> {
+    let mut level = 1_usize;
+    let mut nodes = 1_usize;
+
+    for _ in 0..depth {
+        level = level.checked_mul(fan_out)?;
+        nodes = nodes.checked_add(level)?;
+    }
+
+    nodes.checked_add(level)?.checked_add(1)
 }
 
 /// Returns the number `K` of phase-estimation outcomes for `tree`: the next power of two of
@@ -182,13 +193,15 @@ pub fn acceptance_probability(tree: &NandTree, inputs: &[bool]) -> f64 {
 ///
 /// # Panics
 ///
-/// As [`acceptance_probability`].
+/// As [`acceptance_probability`], and when `runs` is `0`.
 pub fn evaluate<R: Rng + ?Sized>(
     tree: &NandTree,
     inputs: &[bool],
     runs: usize,
     rng: &mut R,
 ) -> Evaluation {
+    assert!(runs > 0, "an evaluation needs at least one run");
+
     let walk = Walk::new(tree, inputs);
     let acceptance = walk.acceptance();
     let accepted = (0..runs).filter(|_| unit_f64(rng) < acceptance).count();

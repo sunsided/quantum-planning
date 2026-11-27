@@ -133,6 +133,10 @@ pub fn acceptance_probability<T: SearchTree>(tree: &T) -> Result<f64, TooManyQub
 /// # Errors
 ///
 /// As [`acceptance_probability`].
+///
+/// # Panics
+///
+/// Panics when `runs` is `0`.
 pub fn detect<T: SearchTree, R: Rng + ?Sized>(
     tree: &T,
     runs: usize,
@@ -151,6 +155,10 @@ pub fn detect<T: SearchTree, R: Rng + ?Sized>(
 /// # Errors
 ///
 /// As [`acceptance_probability`].
+///
+/// # Panics
+///
+/// Panics when `runs` is `0`.
 pub fn find<T: SearchTree, R: Rng + ?Sized>(
     tree: &T,
     runs: usize,
@@ -224,12 +232,18 @@ pub fn classical_backtrack<T: SearchTree>(tree: &T) -> Search<T::Node> {
 /// # Errors
 ///
 /// As [`acceptance_probability`].
+///
+/// # Panics
+///
+/// Panics when `runs` is `0`.
 fn detect_below<T: SearchTree, R: Rng + ?Sized>(
     tree: &T,
     root: T::Node,
     runs: usize,
     rng: &mut R,
 ) -> Result<Detection, TooManyQubits> {
+    assert!(runs > 0, "a detection needs at least one run");
+
     let walk = Walk::new(tree, root)?;
     let acceptance = walk.acceptance();
     let accepted = (0..runs).filter(|_| unit_f64(rng) < acceptance).count();
@@ -419,7 +433,8 @@ mod tests {
     /// Each reflection squares to the identity and the walk step keeps the norm.
     #[test]
     fn reflections_are_involutions() {
-        let walk = Walk::new(&Heap { goal: Some(4) }, 0).unwrap();
+        let tree = Heap { goal: Some(4) };
+        let walk = Walk::new(&tree, tree.root()).unwrap();
         let start: Vec<Complex> = (0..7)
             .map(|i| Complex::new(f64::from(i) - 2.5, 0.5 * f64::from(i)))
             .collect();

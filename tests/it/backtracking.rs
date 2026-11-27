@@ -236,3 +236,10 @@ fn find_is_one_sided() {
         assert!(solution.is_none_or(|node| node == 7));
     }
 }
+
+/// A detection without runs would measure nothing, so it is rejected before the walk.
+#[test]
+#[should_panic(expected = "at least one run")]
+fn rejects_zero_runs() {
+    detect(&Shape::complete(2, 1), 0, &mut SplitMix64::new(1)).unwrap();
+}

@@ -144,7 +144,24 @@ fn time_grows_as_the_square_root_of_the_leaves() {
 /// Trees with fewer than two children per node or past the simulator are rejected.
 #[test]
 fn rejects_trees_above_the_limit() {
+    assert!(
+        NandTree::new(2, 22).is_ok(),
+        "12.6 M graph nodes fit in 2^24"
+    );
     assert!(NandTree::new(2, 23).is_err());
+    assert!(
+        NandTree::new(4, 12).is_err(),
+        "16.8 M leaves alone exceed 2^24"
+    );
     assert!(NandTree::new(2, 200).is_err());
     assert_eq!(NandTree::new(3, 2).unwrap().nodes(), 13);
+}
+
+/// An evaluation without runs would measure nothing, so it is rejected before the walk.
+#[test]
+#[should_panic(expected = "at least one run")]
+fn rejects_zero_runs() {
+    let tree = NandTree::new(2, 1).unwrap();
+
+    evaluate(&tree, &[true, false], 0, &mut SplitMix64::new(1));
 }
