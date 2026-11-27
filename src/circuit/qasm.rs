@@ -69,12 +69,11 @@ fn write_gate(out: &mut String, gate: Gate) -> core::fmt::Result {
 /// Panics when `mask` has three or more bits.
 fn write_mcz(out: &mut String, mask: usize) -> core::fmt::Result {
     let low = mask.trailing_zeros();
-    let high = usize::BITS - 1 - mask.leading_zeros();
 
     match mask.count_ones() {
         0 => writeln!(out, "gphase(pi);"),
         1 => writeln!(out, "z q[{low}];"),
-        2 => writeln!(out, "cz q[{low}], q[{high}];"),
+        2 => writeln!(out, "cz q[{low}], q[{}];", mask.ilog2()),
         _ => unreachable!("decompose lowers every MCZ to at most two qubits"),
     }
 }

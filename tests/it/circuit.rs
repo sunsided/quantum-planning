@@ -192,3 +192,49 @@ fn treats_marked_indices_as_a_set() {
     let result = std::panic::catch_unwind(|| grover::circuit(3, &[8], 0));
     assert!(result.is_err(), "index 8 needs four qubits");
 }
+
+/// Single-qubit gates, one- and zero-qubit `MCZ` and free phases render as their own
+/// statements; a circuit without measurements declares no bit register.
+#[test]
+fn renders_every_gate_kind() {
+    let mut circuit = Circuit::new(2).unwrap();
+    circuit.z(0);
+    circuit.mcz([1]);
+    circuit.mcz([]);
+    circuit.phase(1, 0.5);
+
+    let qasm = circuit.qasm().unwrap();
+
+    assert_eq!(
+        qasm,
+        "OPENQASM 3.0;\ninclude \"stdgates.inc\";\nqubit[2] q;\n\
+         z q[0];\nz q[1];\ngphase(pi);\np(0.5) q[1];\n"
+    );
+
+    let mut state = StateVector::new(2).unwrap();
+    state.x(0);
+    state.x(1);
+    circuit.apply(&mut state);
+    // On |11⟩: Z, Z and the global −1 give −1 in total, then the phase e^(0.5i).
+    let expected = -Complex::from_angle(0.5);
+
+    assert!((state.amplitudes()[3] - expected).norm_sqr() < 1e-18);
+}
+
+/// The bitstring errors say what is wrong.
+#[test]
+fn describes_malformed_bitstrings() {
+    let length = bitstring_index("1", 2).unwrap_err();
+    let character = bitstring_index("1x", 2).unwrap_err();
+
+    assert_eq!(length.to_string(), "bitstring of length 1, expected 2");
+    assert_eq!(character.to_string(), "bitstring has 'x' at position 1");
+}
+
+/// Without marked indices, the circuit only prepares, diffuses and measures.
+#[test]
+fn records_grover_without_marked_indices() {
+    let circuit = grover::circuit(2, &[], 1).unwrap();
+
+    assert_eq!(circuit.two_qubit_gates(), 1);
+}
