@@ -7,6 +7,8 @@ mod circuit;
 mod grover;
 mod nand_tree;
 mod plan;
+#[cfg(feature = "qubo")]
+mod qaoa;
 
 use quantum_planning::Oracle;
 

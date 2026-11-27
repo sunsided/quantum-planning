@@ -24,8 +24,14 @@ exclude = [
     "rustfmt.toml",
 ]
 
+[features]
+## QAOA on QUBO models from planning-qubo (`qaoa`).
+qubo = ["dep:planning-qubo"]
+
 [dependencies]
 libm = "0.2.16"
+# The QUBO models that QAOA optimizes; only with the `qubo` feature.
+planning-qubo = { version = "0.2.1", optional = true }
 rand_core = { version = "0.10.1", default-features = false }
 
 [package.metadata.docs.rs]

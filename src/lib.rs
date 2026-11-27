@@ -18,16 +18,19 @@
 //! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
 //!   ([`amplitude_estimation`])
 //! - Quantum-walk evaluation of game trees (NAND trees) ([`nand_tree`])
-//! - QAOA circuits for QUBO-encoded planning problems (planned)
+//! - QAOA circuits for QUBO-encoded planning problems, with the `qubo` feature (`qaoa`)
 //! - Query-count comparisons against the classical algorithms
 //!
 //! ## Query count
 //!
 //! The algorithms count oracle queries, not simulator work: one application of a
 //! [`PhaseOracle`] is one query, and one classical check of a measured candidate is one
-//! query. Compare these counts with the queries of a classical scan.
+//! query. Compare these counts with the queries of a classical scan. The walks count walk
+//! steps ([`backtracking`]) or evolution time ([`nand_tree`]), amplitude estimation counts
+//! rollout calls, and QAOA counts expectation evaluations and shots; each module says how.
 //!
-//! The crate is `no_std` and needs `alloc` for the amplitudes.
+//! The crate is `no_std` and needs `alloc` for the amplitudes. The `qubo` feature adds the
+//! `qaoa` module on [`planning-qubo`](https://docs.rs/planning-qubo) models.
 //!
 //! Repository: <https://github.com/sunsided/quantum-planning>
 
@@ -44,6 +47,8 @@ pub mod grover;
 pub mod nand_tree;
 mod phase_estimation;
 mod phase_oracle;
+#[cfg(feature = "qubo")]
+pub mod qaoa;
 mod rng;
 mod state;
 

@@ -49,7 +49,7 @@ Quantum backtracking, amplitude estimation, NAND-tree walks and QAOA on
   classical Monte Carlo at the same number of rollouts
 - Quantum-walk evaluation of game trees (NAND trees) by phase estimation of a
   continuous-time walk
-- QAOA circuits for QUBO-encoded planning problems (planned)
+- QAOA circuits for QUBO-encoded planning problems, behind the optional `qubo` feature
 - Query-count comparisons against the classical algorithms
 
 The algorithms run on simulators and are measured in oracle and query counts against their classical counterparts, which limits instances to a few dozen qubits. QUBO models come from [planning-qubo](https://github.com/sunsided/planning-qubo), oracles from [constraint-search](https://github.com/sunsided/constraint-search) and game trees from [game-tree-search](https://github.com/sunsided/game-tree-search).
@@ -132,8 +132,14 @@ let counts = candidate_counts([("101", 950), ("011", 50)], 3).expect("valid bits
 assert_eq!(counts, [(3, 50), (5, 950)]);
 ```
 
+The other algorithms live in their modules: `backtracking` (Montanaro's walk on a
+`SearchTree`), `amplitude_estimation` (rollout values in `[0, 1]`), `nand_tree` (balanced
+NAND trees) and, with the `qubo` feature, `qaoa` (on `planning_qubo::Qubo` models). Each
+reports its cost in the unit its module documents, next to a classical baseline.
+
 The crate is `no_std` with `alloc`. It depends on `libm` and on `rand_core`: sampling and the
-searches take any `R: rand_core::Rng`, and `SplitMix64` is a small seeded one.
+searches take any `R: rand_core::Rng`, and `SplitMix64` is a small seeded one. The optional
+`qubo` feature adds `planning-qubo`.
 
 ## Minimum supported Rust version
 
