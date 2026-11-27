@@ -16,7 +16,7 @@ use core::fmt;
 use rand_core::Rng;
 
 use crate::Complex;
-use crate::rng::unit_f64;
+use crate::rng::pick;
 
 /// The largest register the simulator accepts: `2^24` amplitudes, 256 MiB of state.
 pub const MAX_QUBITS: usize = 24;
@@ -225,6 +225,13 @@ impl StateVector {
         }
     }
 
+    /// Returns the amplitudes for an in-place change by an algorithm of this crate.
+    ///
+    /// The caller keeps the norm at 1.
+    pub(crate) fn amplitudes_mut(&mut self) -> &mut [Complex] {
+        &mut self.amplitudes
+    }
+
     /// Changes the sign of the amplitude of the basis state `index`.
     ///
     /// # Panics
@@ -244,18 +251,10 @@ impl StateVector {
     /// The draw comes from `rng`, so a fixed seed gives a reproducible result. When rounding
     /// leaves the probabilities a little below 1 in total, the last index takes the rest.
     pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
-        let draw = unit_f64(rng);
-        let mut cumulative = 0.0;
-
-        for (index, probability) in self.probabilities().enumerate() {
-            cumulative += probability;
-
-            if draw < cumulative {
-                return index;
-            }
-        }
-
-        self.states() - 1
+        pick(
+            rng,
+            self.amplitudes.iter().map(|amplitude| amplitude.norm_sqr()),
+        )
     }
 
     /// Returns the index mask of `qubit`.

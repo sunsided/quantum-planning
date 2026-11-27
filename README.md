@@ -44,7 +44,8 @@ Quantum backtracking, amplitude estimation, NAND-tree walks and QAOA on
   known and an unknown (BBHT exponential search) number of solutions, and as an exportable
   circuit
 - Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
-- Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
+- Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts, against
+  classical Monte Carlo at the same number of rollouts
 - Quantum-walk evaluation of game trees (NAND trees) (planned)
 - QAOA circuits for QUBO-encoded planning problems (planned)
 - Query-count comparisons against the classical algorithms

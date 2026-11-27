@@ -15,7 +15,8 @@
 //!   ([`grover::search_unknown`], BBHT) number of solutions, and as an exportable circuit
 //!   ([`grover::circuit`])
 //! - Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
-//! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
+//! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
+//!   ([`amplitude_estimation`])
 //! - Quantum-walk evaluation of game trees (NAND trees) (planned)
 //! - QAOA circuits for QUBO-encoded planning problems (planned)
 //! - Query-count comparisons against the classical algorithms
@@ -35,9 +36,11 @@
 
 extern crate alloc;
 
+pub mod amplitude_estimation;
 pub mod circuit;
 mod complex;
 pub mod grover;
+mod phase_estimation;
 mod phase_oracle;
 mod rng;
 mod state;
