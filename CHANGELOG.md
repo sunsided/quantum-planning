@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/sunsided/quantum-planning/compare/v0.1.0...v0.1.1) - 2026-11-27
+
+### Added
+
+- Add QAOA for QUBO models behind the qubo feature
+- Add NAND-tree evaluation by a continuous-time quantum walk
+- Add Montanaro quantum backtracking on search trees
+- Add amplitude estimation of Monte Carlo rollout values
+- Add OpenQASM 3 export of recorded circuits
+
+### Changed
+
+- Update the README audience for the algorithms added in #9
+- Test error messages, the QAOA size limit and zero Ising fields
+- Bound the NAND walk graph and reject zero-run detections
+
+### Fixed
+
+- Fix OpenQASM rendering of an empty multi-controlled Z
+
 ## [0.1.0](https://github.com/sunsided/quantum-planning/releases/tag/v0.1.0) - 2026-11-23
 
 ### Added
