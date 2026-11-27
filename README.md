@@ -16,10 +16,16 @@ Quantum algorithms for planning and search, on simulators: Grover search, quantu
   with a known number of solutions and BBHT exponential search with an unknown number, on a
   state-vector simulator. The oracle is an ordinary validity check on a candidate, such as
   "is this plan valid", so the same predicate serves a classical and a quantum search.
+  Montanaro's backtracking walk, amplitude estimation of rollout values, NAND-tree
+  evaluation of game trees and QAOA on QUBO models run on the same simulator.
 - **Honest query-count comparisons**: every phase-oracle application and every classical
   check of a measured candidate counts as one query. Put these counts next to a classical
   scan over the same oracle, and the `√N` against `N` gap shows on real instances, not
-  only in the formula.
+  only in the formula. The other algorithms report walk steps, rollout calls or evolution
+  time next to their classical baselines, including where the classical side still wins.
+- **Hardware experiments**: Grover and QAOA circuits export as OpenQASM 3 for IBM Quantum,
+  Amazon Braket or Azure Quantum, with depth and two-qubit gate counts to judge what a noisy
+  device can run, and measured counts map back to candidates.
 - **`no_std` demos**: the crate needs only `alloc`, so it runs in WebAssembly, for example
   in a browser page that shows the amplitudes change from one Grover iteration to the next.
 
@@ -28,8 +34,6 @@ solution faster than a classical search does. To solve plans, use
 [heuristic-search](https://github.com/sunsided/heuristic-search) for state-space search,
 [constraint-search](https://github.com/sunsided/constraint-search) for constraint problems
 and [game-tree-search](https://github.com/sunsided/game-tree-search) for two-player games.
-Quantum backtracking, amplitude estimation, NAND-tree walks and QAOA on
-[planning-qubo](https://github.com/sunsided/planning-qubo) models are planned, not built yet.
 
 ## Scope
 
@@ -52,7 +56,7 @@ Quantum backtracking, amplitude estimation, NAND-tree walks and QAOA on
 - QAOA circuits for QUBO-encoded planning problems, behind the optional `qubo` feature
 - Query-count comparisons against the classical algorithms
 
-The algorithms run on simulators and are measured in oracle and query counts against their classical counterparts, which limits instances to a few dozen qubits. QUBO models come from [planning-qubo](https://github.com/sunsided/planning-qubo), oracles from [constraint-search](https://github.com/sunsided/constraint-search) and game trees from [game-tree-search](https://github.com/sunsided/game-tree-search).
+The algorithms run on simulators and are measured in oracle and query counts against their classical counterparts, which limits instances to at most 24 qubits. QUBO models come from [planning-qubo](https://github.com/sunsided/planning-qubo), oracles from [constraint-search](https://github.com/sunsided/constraint-search) and game trees from [game-tree-search](https://github.com/sunsided/game-tree-search).
 
 ## Usage
 
