@@ -43,7 +43,8 @@ fn energies_match_the_model() {
 /// on a model with fields, couplings and an offset.
 #[test]
 fn circuit_matches_the_simulated_state() {
-    let mut qubo = Qubo::<f64>::new(3);
+    // Variable 3 has no terms, so its field is zero and the circuit skips its rotation.
+    let mut qubo = Qubo::<f64>::new(4);
     qubo.add_offset(0.7);
     qubo.add_linear(0, -1.5);
     qubo.add_linear(2, 0.4);
@@ -52,11 +53,18 @@ fn circuit_matches_the_simulated_state() {
     let qaoa = Qaoa::new(&qubo).unwrap();
 
     let (gammas, betas) = ([0.31, 1.2], [0.7, 0.15]);
-    let mut direct = StateVector::new(3).unwrap();
+    let mut direct = StateVector::new(4).unwrap();
     qaoa.prepare(&gammas, &betas, &mut direct);
 
     let circuit = qaoa.circuit(&gammas, &betas);
-    let mut recorded = StateVector::new(3).unwrap();
+    assert!(!circuit.qasm().unwrap().contains("rz(0) q[3]"));
+    assert!(
+        !circuit
+            .gates()
+            .iter()
+            .any(|gate| matches!(gate, quantum_planning::Gate::Rz { qubit: 3, .. }))
+    );
+    let mut recorded = StateVector::new(4).unwrap();
     circuit.apply(&mut recorded);
 
     assert!((overlap(direct.amplitudes(), recorded.amplitudes()) - 1.0).abs() < 1e-9);
@@ -82,6 +90,12 @@ fn finds_the_cheapest_assignment() {
         one.expectation
     );
     assert!(two.expectation <= one.expectation + 1e-9);
+
+    // The reported expectation belongs to the returned angles.
+    for parameters in [&one, &two] {
+        let recomputed = qaoa.expectation(&parameters.gammas, &parameters.betas);
+        assert!((recomputed - parameters.expectation).abs() < 1e-12);
+    }
     assert!(two.evaluations > 0);
 
     let exhaustive = qaoa.exhaustive_minimum();
@@ -93,4 +107,12 @@ fn finds_the_cheapest_assignment() {
     let decoded = encoding.decode(&bits);
     assert_eq!(decoded.agents, [Some(1), Some(0)]);
     assert_eq!(decoded.cost, 3);
+}
+
+/// A model with more variables than the simulator holds is an error.
+#[test]
+fn rejects_models_above_the_limit() {
+    let qubo = Qubo::<i64>::new(quantum_planning::MAX_QUBITS + 1);
+
+    assert!(Qaoa::new(&qubo).is_err());
 }

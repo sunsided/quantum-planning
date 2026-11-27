@@ -132,8 +132,20 @@ fn rejects_invalid_problems() {
         })
     );
     assert!(classical_estimate(1, |_| f64::NAN, 3, &mut rng).is_err());
-    assert!(matches!(
-        outcomes(20, |_| 0.5, 4),
-        Err(EstimationError::TooManyQubits(_))
-    ));
+
+    let too_many = outcomes(20, |_| 0.5, 4).unwrap_err();
+    assert!(matches!(too_many, EstimationError::TooManyQubits(_)));
+    assert_eq!(
+        too_many.to_string(),
+        "25 qubits requested, but the simulator holds at most 24"
+    );
+
+    let invalid = EstimationError::InvalidValue {
+        seed: 3,
+        value: -0.5,
+    };
+    assert_eq!(
+        invalid.to_string(),
+        "rollout 3 returned -0.5, outside [0, 1]"
+    );
 }
