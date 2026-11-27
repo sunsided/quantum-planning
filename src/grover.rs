@@ -21,7 +21,8 @@ use core::f64::consts::FRAC_PI_4;
 
 use rand_core::Rng;
 
-use crate::{Oracle, PhaseOracle, StateVector};
+use crate::circuit::Gates;
+use crate::{Circuit, Oracle, PhaseOracle, StateVector, TooManyQubits};
 
 /// Returns the iteration count that maximizes `sin²((2k+1)θ)` for `marked` of `states`.
 ///
@@ -89,26 +90,87 @@ where
     oracle.check(index).then_some(index)
 }
 
-/// Reflects `state` about the even superposition, up to a global phase of `−1`.
-fn diffuse(state: &mut StateVector) {
-    hadamard_all(state);
-    x_all(state);
-    state.mcz(0..state.qubits());
-    x_all(state);
-    hadamard_all(state);
+/// Records Grover search for the basis indices in `marked` as an exportable circuit.
+///
+/// The circuit prepares the even superposition, applies `iterations` Grover iterations and
+/// measures every qubit. It is the gate sequence of [`amplify`], with the phase oracle
+/// compiled from the marked set: for each marked index, `X` on its zero bits, `MCZ` on all
+/// qubits and `X` again. Hardware needs the oracle as gates, and a classical predicate has
+/// none, so the marked set stands in for it. Listing the set costs a classical evaluation
+/// of every candidate ([`PhaseOracle::marked`]), so the export demonstrates the circuit and
+/// its cost, not a speedup. A repeated index counts once. Pass [`optimal_iterations`] of
+/// the set size for the best success chance. See [`Circuit::qasm`] for the program text.
+///
+/// # Errors
+///
+/// Returns [`TooManyQubits`] when `qubits` is more than [`MAX_QUBITS`](crate::MAX_QUBITS).
+///
+/// # Panics
+///
+/// Panics when a marked index is not below `2^qubits`.
+pub fn circuit(
+    qubits: usize,
+    marked: &[usize],
+    iterations: usize,
+) -> Result<Circuit, TooManyQubits> {
+    let mut circuit = Circuit::new(qubits)?;
+    let all = (1 << qubits) - 1;
+
+    let mut marked = marked.to_vec();
+    marked.sort_unstable();
+    marked.dedup();
+
+    if let Some(&index) = marked.last() {
+        assert!(
+            index <= all,
+            "marked index {index} needs more than {qubits} qubits"
+        );
+    }
+
+    hadamard_all(&mut circuit);
+
+    for _ in 0..iterations {
+        for &index in &marked {
+            flip_zeros(&mut circuit, index, all);
+            circuit.mcz_mask(all);
+            flip_zeros(&mut circuit, index, all);
+        }
+
+        diffuse(&mut circuit);
+    }
+
+    circuit.measure_all();
+
+    Ok(circuit)
 }
 
-/// Applies `H` to every qubit of `state`.
-fn hadamard_all(state: &mut StateVector) {
-    for qubit in 0..state.qubits() {
-        state.h(qubit);
+/// Applies `X` to the qubits whose bit is `0` in `index`, within the mask `all`.
+fn flip_zeros(gates: &mut impl Gates, index: usize, all: usize) {
+    for qubit in (0..gates.width()).filter(|qubit| (!index & all) >> qubit & 1 == 1) {
+        gates.x(qubit);
     }
 }
 
-/// Applies `X` to every qubit of `state`.
-fn x_all(state: &mut StateVector) {
-    for qubit in 0..state.qubits() {
-        state.x(qubit);
+/// Reflects the register about the even superposition, up to a global phase of `−1`.
+fn diffuse(gates: &mut impl Gates) {
+    hadamard_all(gates);
+    x_all(gates);
+    gates.mcz_mask((1 << gates.width()) - 1);
+    x_all(gates);
+    hadamard_all(gates);
+}
+
+/// Applies `H` to every qubit.
+fn hadamard_all(gates: &mut impl Gates) {
+    for qubit in 0..gates.width() {
+        gates.h(qubit);
+    }
+}
+
+/// Applies `X` to every qubit.
+fn x_all(gates: &mut impl Gates) {
+    for qubit in 0..gates.width() {
+        gates.x(qubit);
     }
 }
 

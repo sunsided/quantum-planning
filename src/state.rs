@@ -165,6 +165,66 @@ impl StateVector {
         }
     }
 
+    /// Applies the controlled NOT gate: `X` on `target` where `control` is `1`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when a qubit is not less than [`qubits`](Self::qubits), or when `control`
+    /// equals `target`.
+    pub fn cx(&mut self, control: usize, target: usize) {
+        assert_ne!(control, target, "cx needs two distinct qubits");
+
+        let control = self.bit(control);
+        let target = self.bit(target);
+
+        for zero in (0..self.states()).filter(|index| index & (control | target) == control) {
+            self.amplitudes.swap(zero, zero | target);
+        }
+    }
+
+    /// Applies the rotation `RX(angle) = e^(−i·angle·X/2)` to `qubit`, with `angle` in
+    /// radians. This is the `rx` gate of OpenQASM's `stdgates.inc`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `qubit` is not less than [`qubits`](Self::qubits).
+    pub fn rx(&mut self, qubit: usize, angle: f64) {
+        let bit = self.bit(qubit);
+        let cos = Complex::new(libm::cos(angle / 2.0), 0.0);
+        let minus_i_sin = Complex::new(0.0, -libm::sin(angle / 2.0));
+
+        for zero in (0..self.states()).filter(|index| index & bit == 0) {
+            let a = self.amplitudes[zero];
+            let b = self.amplitudes[zero | bit];
+
+            self.amplitudes[zero] = cos * a + minus_i_sin * b;
+            self.amplitudes[zero | bit] = minus_i_sin * a + cos * b;
+        }
+    }
+
+    /// Applies the rotation `RZ(angle) = diag(e^(−i·angle/2), e^(i·angle/2))` to `qubit`,
+    /// with `angle` in radians. This is the `rz` gate of OpenQASM's `stdgates.inc`; it equals
+    /// [`phase`](Self::phase) up to the global phase `e^(−i·angle/2)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `qubit` is not less than [`qubits`](Self::qubits).
+    pub fn rz(&mut self, qubit: usize, angle: f64) {
+        let bit = self.bit(qubit);
+        let zero_factor = Complex::from_angle(-angle / 2.0);
+        let one_factor = Complex::from_angle(angle / 2.0);
+
+        for (index, amplitude) in self.amplitudes.iter_mut().enumerate() {
+            let factor = if index & bit == 0 {
+                zero_factor
+            } else {
+                one_factor
+            };
+
+            *amplitude = *amplitude * factor;
+        }
+    }
+
     /// Changes the sign of the amplitude of the basis state `index`.
     ///
     /// # Panics

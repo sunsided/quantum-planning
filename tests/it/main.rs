@@ -1,6 +1,7 @@
-//! Integration tests for the simulator and the Grover searches.
+//! Integration tests for the simulator, the circuits and the algorithms.
 
 mod bbht;
+mod circuit;
 mod grover;
 mod plan;
 

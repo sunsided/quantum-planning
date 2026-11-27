@@ -4,11 +4,16 @@
 //!
 //! ## Scope
 //!
-//! - A state-vector simulator ([`StateVector`]) with `H`, `X`, `Z`, phase and multi-controlled
-//!   `Z` gates, measurement probabilities and seeded sampling over any [`rand_core::Rng`]
+//! - A state-vector simulator ([`StateVector`]) with `H`, `X`, `Z`, phase, `RX`, `RZ`, `CX`
+//!   and multi-controlled `Z` gates, measurement probabilities and seeded sampling over any
+//!   [`rand_core::Rng`]
+//! - Recorded circuits ([`Circuit`]) that run on the simulator and export as OpenQASM 3 for
+//!   gate-based hardware, with multi-controlled `Z` lowered to `stdgates.inc`, depth and
+//!   two-qubit gate counts, and hardware counts mapped back to candidates ([`circuit`])
 //! - Grover search over candidate plans, with phase oracles ([`PhaseOracle`]) built from
 //!   validity checks, for a known ([`grover::search_known`]) and an unknown
-//!   ([`grover::search_unknown`], BBHT) number of solutions
+//!   ([`grover::search_unknown`], BBHT) number of solutions, and as an exportable circuit
+//!   ([`grover::circuit`])
 //! - Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
 //! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
 //! - Quantum-walk evaluation of game trees (NAND trees) (planned)
@@ -30,12 +35,14 @@
 
 extern crate alloc;
 
+pub mod circuit;
 mod complex;
 pub mod grover;
 mod phase_oracle;
 mod rng;
 mod state;
 
+pub use circuit::{Circuit, Gate};
 pub use complex::Complex;
 pub use phase_oracle::PhaseOracle;
 pub use rng::SplitMix64;
