@@ -16,7 +16,7 @@ use core::fmt;
 use rand_core::Rng;
 
 use crate::Complex;
-use crate::rng::unit_f64;
+use crate::rng::pick;
 
 /// The largest register the simulator accepts: `2^24` amplitudes, 256 MiB of state.
 pub const MAX_QUBITS: usize = 24;
@@ -165,6 +165,73 @@ impl StateVector {
         }
     }
 
+    /// Applies the controlled NOT gate: `X` on `target` where `control` is `1`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when a qubit is not less than [`qubits`](Self::qubits), or when `control`
+    /// equals `target`.
+    pub fn cx(&mut self, control: usize, target: usize) {
+        assert_ne!(control, target, "cx needs two distinct qubits");
+
+        let control = self.bit(control);
+        let target = self.bit(target);
+
+        for zero in (0..self.states()).filter(|index| index & (control | target) == control) {
+            self.amplitudes.swap(zero, zero | target);
+        }
+    }
+
+    /// Applies the rotation `RX(angle) = e^(−i·angle·X/2)` to `qubit`, with `angle` in
+    /// radians. This is the `rx` gate of OpenQASM's `stdgates.inc`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `qubit` is not less than [`qubits`](Self::qubits).
+    pub fn rx(&mut self, qubit: usize, angle: f64) {
+        let bit = self.bit(qubit);
+        let cos = Complex::new(libm::cos(angle / 2.0), 0.0);
+        let minus_i_sin = Complex::new(0.0, -libm::sin(angle / 2.0));
+
+        for zero in (0..self.states()).filter(|index| index & bit == 0) {
+            let a = self.amplitudes[zero];
+            let b = self.amplitudes[zero | bit];
+
+            self.amplitudes[zero] = cos * a + minus_i_sin * b;
+            self.amplitudes[zero | bit] = minus_i_sin * a + cos * b;
+        }
+    }
+
+    /// Applies the rotation `RZ(angle) = diag(e^(−i·angle/2), e^(i·angle/2))` to `qubit`,
+    /// with `angle` in radians. This is the `rz` gate of OpenQASM's `stdgates.inc`; it equals
+    /// [`phase`](Self::phase) up to the global phase `e^(−i·angle/2)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `qubit` is not less than [`qubits`](Self::qubits).
+    pub fn rz(&mut self, qubit: usize, angle: f64) {
+        let bit = self.bit(qubit);
+        let zero_factor = Complex::from_angle(-angle / 2.0);
+        let one_factor = Complex::from_angle(angle / 2.0);
+
+        for (index, amplitude) in self.amplitudes.iter_mut().enumerate() {
+            let factor = if index & bit == 0 {
+                zero_factor
+            } else {
+                one_factor
+            };
+
+            *amplitude = *amplitude * factor;
+        }
+    }
+
+    /// Returns the amplitudes for an in-place change by an algorithm of this crate.
+    ///
+    /// The caller keeps the norm at 1.
+    pub(crate) fn amplitudes_mut(&mut self) -> &mut [Complex] {
+        &mut self.amplitudes
+    }
+
     /// Changes the sign of the amplitude of the basis state `index`.
     ///
     /// # Panics
@@ -184,18 +251,10 @@ impl StateVector {
     /// The draw comes from `rng`, so a fixed seed gives a reproducible result. When rounding
     /// leaves the probabilities a little below 1 in total, the last index takes the rest.
     pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
-        let draw = unit_f64(rng);
-        let mut cumulative = 0.0;
-
-        for (index, probability) in self.probabilities().enumerate() {
-            cumulative += probability;
-
-            if draw < cumulative {
-                return index;
-            }
-        }
-
-        self.states() - 1
+        pick(
+            rng,
+            self.amplitudes.iter().map(|amplitude| amplitude.norm_sqr()),
+        )
     }
 
     /// Returns the index mask of `qubit`.

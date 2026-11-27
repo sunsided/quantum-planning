@@ -67,6 +67,16 @@ where
         self.marks(index)
     }
 
+    /// Returns the basis indices below `states` that the oracle marks, in index order.
+    ///
+    /// This evaluates the predicate once per index, classically, and counts no query. It
+    /// compiles the oracle to a marked set for circuit export
+    /// ([`grover::circuit`](crate::grover::circuit)); it is not part of a search. For an
+    /// `n`-qubit register, pass `states = 2^n`.
+    pub fn marked(&self, states: usize) -> impl Iterator<Item = usize> + '_ {
+        (0..states).filter(|&index| self.marks(index))
+    }
+
     /// Returns whether `index` maps to a candidate that the oracle accepts. No query counts.
     fn marks(&self, index: usize) -> bool {
         (self.candidate)(index).is_some_and(|candidate| self.oracle.accepts(&candidate))

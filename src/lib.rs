@@ -4,24 +4,33 @@
 //!
 //! ## Scope
 //!
-//! - A state-vector simulator ([`StateVector`]) with `H`, `X`, `Z`, phase and multi-controlled
-//!   `Z` gates, measurement probabilities and seeded sampling over any [`rand_core::Rng`]
+//! - A state-vector simulator ([`StateVector`]) with `H`, `X`, `Z`, phase, `RX`, `RZ`, `CX`
+//!   and multi-controlled `Z` gates, measurement probabilities and seeded sampling over any
+//!   [`rand_core::Rng`]
+//! - Recorded circuits ([`Circuit`]) that run on the simulator and export as OpenQASM 3 for
+//!   gate-based hardware, with multi-controlled `Z` lowered to `stdgates.inc`, depth and
+//!   two-qubit gate counts, and hardware counts mapped back to candidates ([`circuit`])
 //! - Grover search over candidate plans, with phase oracles ([`PhaseOracle`]) built from
 //!   validity checks, for a known ([`grover::search_known`]) and an unknown
-//!   ([`grover::search_unknown`], BBHT) number of solutions
-//! - Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
-//! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
-//! - Quantum-walk evaluation of game trees (NAND trees) (planned)
-//! - QAOA circuits for QUBO-encoded planning problems (planned)
+//!   ([`grover::search_unknown`], BBHT) number of solutions, and as an exportable circuit
+//!   ([`grover::circuit`])
+//! - Quantum backtracking (Montanaro) as a quantum walk on search trees ([`backtracking`])
+//! - Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts
+//!   ([`amplitude_estimation`])
+//! - Quantum-walk evaluation of game trees (NAND trees) ([`nand_tree`])
+//! - QAOA circuits for QUBO-encoded planning problems, with the `qubo` feature (`qaoa`)
 //! - Query-count comparisons against the classical algorithms
 //!
 //! ## Query count
 //!
 //! The algorithms count oracle queries, not simulator work: one application of a
 //! [`PhaseOracle`] is one query, and one classical check of a measured candidate is one
-//! query. Compare these counts with the queries of a classical scan.
+//! query. Compare these counts with the queries of a classical scan. The walks count walk
+//! steps ([`backtracking`]) or evolution time ([`nand_tree`]), amplitude estimation counts
+//! rollout calls, and QAOA counts expectation evaluations and shots; each module says how.
 //!
-//! The crate is `no_std` and needs `alloc` for the amplitudes.
+//! The crate is `no_std` and needs `alloc` for the amplitudes. The `qubo` feature adds the
+//! `qaoa` module on [`planning-qubo`](https://docs.rs/planning-qubo) models.
 //!
 //! Repository: <https://github.com/sunsided/quantum-planning>
 
@@ -30,12 +39,20 @@
 
 extern crate alloc;
 
+pub mod amplitude_estimation;
+pub mod backtracking;
+pub mod circuit;
 mod complex;
 pub mod grover;
+pub mod nand_tree;
+mod phase_estimation;
 mod phase_oracle;
+#[cfg(feature = "qubo")]
+pub mod qaoa;
 mod rng;
 mod state;
 
+pub use circuit::{Circuit, Gate};
 pub use complex::Complex;
 pub use phase_oracle::PhaseOracle;
 pub use rng::SplitMix64;

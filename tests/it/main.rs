@@ -1,8 +1,14 @@
-//! Integration tests for the simulator and the Grover searches.
+//! Integration tests for the simulator, the circuits and the algorithms.
 
+mod amplitude_estimation;
+mod backtracking;
 mod bbht;
+mod circuit;
 mod grover;
+mod nand_tree;
 mod plan;
+#[cfg(feature = "qubo")]
+mod qaoa;
 
 use quantum_planning::Oracle;
 

@@ -33,15 +33,23 @@ Quantum backtracking, amplitude estimation, NAND-tree walks and QAOA on
 
 ## Scope
 
-- A state-vector simulator with `H`, `X`, `Z`, phase and multi-controlled `Z` gates,
-  measurement probabilities and seeded sampling (little-endian: qubit `q` is bit `q` of the
-  basis index)
+- A state-vector simulator with `H`, `X`, `Z`, phase, `RX`, `RZ`, `CX` and multi-controlled
+  `Z` gates, measurement probabilities and seeded sampling (little-endian: qubit `q` is bit
+  `q` of the basis index)
+- Recorded circuits that run on the simulator and export as OpenQASM 3 for gate-based
+  hardware (IBM Quantum, Amazon Braket, Azure Quantum): multi-controlled `Z` lowered to
+  `stdgates.inc` with ancillas, depth and two-qubit gate counts, and hardware counts
+  mapped back to candidate indices
 - Grover search over candidate plans, with phase oracles built from validity checks, for a
-  known and an unknown (BBHT exponential search) number of solutions
-- Quantum backtracking (Montanaro) as a quantum walk on search trees (planned)
-- Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts (planned)
-- Quantum-walk evaluation of game trees (NAND trees) (planned)
-- QAOA circuits for QUBO-encoded planning problems (planned)
+  known and an unknown (BBHT exponential search) number of solutions, and as an exportable
+  circuit
+- Quantum backtracking (Montanaro) as a quantum walk on search trees, with detection and
+  search against classical depth-first backtracking
+- Amplitude estimation for Monte Carlo value estimates, as used in MCTS rollouts, against
+  classical Monte Carlo at the same number of rollouts
+- Quantum-walk evaluation of game trees (NAND trees) by phase estimation of a
+  continuous-time walk
+- QAOA circuits for QUBO-encoded planning problems, behind the optional `qubo` feature
 - Query-count comparisons against the classical algorithms
 
 The algorithms run on simulators and are measured in oracle and query counts against their classical counterparts, which limits instances to a few dozen qubits. QUBO models come from [planning-qubo](https://github.com/sunsided/planning-qubo), oracles from [constraint-search](https://github.com/sunsided/constraint-search) and game trees from [game-tree-search](https://github.com/sunsided/game-tree-search).
@@ -103,8 +111,35 @@ The query counts count oracle calls, not simulator work: one phase-oracle applic
 classical check is one query. A classical scan needs about `N/(M+1)` queries; Grover search
 needs about `π/4·√(N/M)`.
 
+A recorded Grover circuit exports as an OpenQASM 3 program. Hardware prints measured
+bitstrings with the highest qubit first; `candidate_counts` reads them back as indices.
+
+```rust
+use quantum_planning::circuit::candidate_counts;
+use quantum_planning::grover;
+
+// Three qubits, index 5 marked, two iterations: about 95% success.
+let circuit = grover::circuit(3, &[5], 2).expect("3 qubits are below the limit");
+let lowered = circuit.decompose().expect("no ancillas needed for 3 qubits");
+let qasm = circuit.qasm().expect("the lowering fits");
+
+assert!(qasm.starts_with("OPENQASM 3.0;\ninclude \"stdgates.inc\";"));
+assert_eq!(lowered.two_qubit_gates(), 24);
+
+// "101" is c[2] = 1, c[1] = 0, c[0] = 1: index 5.
+let counts = candidate_counts([("101", 950), ("011", 50)], 3).expect("valid bitstrings");
+
+assert_eq!(counts, [(3, 50), (5, 950)]);
+```
+
+The other algorithms live in their modules: `backtracking` (Montanaro's walk on a
+`SearchTree`), `amplitude_estimation` (rollout values in `[0, 1]`), `nand_tree` (balanced
+NAND trees) and, with the `qubo` feature, `qaoa` (on `planning_qubo::Qubo` models). Each
+reports its cost in the unit its module documents, next to a classical baseline.
+
 The crate is `no_std` with `alloc`. It depends on `libm` and on `rand_core`: sampling and the
-searches take any `R: rand_core::Rng`, and `SplitMix64` is a small seeded one.
+searches take any `R: rand_core::Rng`, and `SplitMix64` is a small seeded one. The optional
+`qubo` feature adds `planning-qubo`.
 
 ## Minimum supported Rust version
 

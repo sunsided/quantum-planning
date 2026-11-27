@@ -76,6 +76,34 @@ pub(crate) fn unit_f64<R: Rng + ?Sized>(rng: &mut R) -> f64 {
     bits * UNIT
 }
 
+/// Draws an index from `probabilities`; when rounding leaves the total a little below 1,
+/// the last index takes the rest.
+///
+/// # Panics
+///
+/// Panics when `probabilities` is empty.
+pub(crate) fn pick<R: Rng + ?Sized>(
+    rng: &mut R,
+    probabilities: impl ExactSizeIterator<Item = f64>,
+) -> usize {
+    let last = probabilities
+        .len()
+        .checked_sub(1)
+        .expect("at least one outcome");
+    let draw = unit_f64(rng);
+    let mut cumulative = 0.0;
+
+    for (index, probability) in probabilities.enumerate() {
+        cumulative += probability;
+
+        if draw < cumulative {
+            return index;
+        }
+    }
+
+    last
+}
+
 /// Returns a uniform integer in `0..bound` from `rng`, or `0` when `bound` is `0`.
 ///
 /// shortcut: multiply-high without rejection, so the bias is at most `bound / 2^64`; add
